@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Pumpkin Panic</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #070506;
+        color: #fff;
+        font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      }
+
+      #unity-container {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: radial-gradient(circle at 50% 40%, #2a1b12 0%, #120d0a 55%, #070506 100%);
+      }
+
+      #unity-canvas {
+        display: block;
+        background: #000;
+        box-shadow: 0 0 60px rgba(255, 138, 31, 0.15);
+      }
+
+      #unity-warning {
+        position: absolute;
+        top: 12px;
+        left: 50%;
+        z-index: 200;
+        width: min(92%, 720px);
+        transform: translateX(-50%);
+      }
+
+      #unity-warning div {
+        margin-bottom: 8px;
+        border-radius: 10px;
+        text-align: center;
+        font-size: 14px;
+      }
+
+      #unity-footer {
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 10;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 12px;
+        height: 44px;
+        padding: 0 16px;
+        pointer-events: none;
+        background: linear-gradient(to top, rgba(0, 0, 0, 0.55), transparent);
+      }
+
+      #unity-build-title {
+        pointer-events: none;
+        font-size: 13px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        opacity: 0.65;
+      }
+
+      #unity-fullscreen-button {
+        pointer-events: auto;
+        padding: 6px 12px;
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.08);
+        color: #fff;
+        font-family: inherit;
+        font-size: 13px;
+        cursor: pointer;
+        transition: background 0.2s, border-color 0.2s;
+      }
+
+      #unity-fullscreen-button:hover {
+        border-color: rgba(255, 138, 31, 0.6);
+        background: rgba(255, 138, 31, 0.25);
+      }
+
+      #unity-loading-screen {
+        position: fixed;
+        inset: 0;
+        z-index: 100;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: radial-gradient(circle at 50% 35%, #3a2414 0%, #150e0a 55%, #070506 100%);
+        transition: opacity 0.5s ease;
+      }
+
+      #unity-loading-screen.hidden {
+        pointer-events: none;
+        opacity: 0;
+      }
+
+      .loading-content {
+        width: min(78vw, 420px);
+        text-align: center;
+      }
+
+      .loading-title {
+        margin-bottom: 22px;
+        color: #ffb347;
+        font-size: clamp(28px, 6vw, 46px);
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        text-shadow: 0 0 24px rgba(255, 138, 31, 0.45);
+      }
+
+      #unity-progress-bar-empty {
+        overflow: hidden;
+        height: 10px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.12);
+        box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
+      }
+
+      #unity-progress-bar-full {
+        width: 0%;
+        height: 100%;
+        border-radius: 999px;
+        background: linear-gradient(90deg, #ff8a1f, #ffc35c);
+        box-shadow: 0 0 16px rgba(255, 138, 31, 0.6);
+        transition: width 0.2s ease;
+      }
+
+      #unity-progress-text {
+        margin-top: 10px;
+        font-size: 13px;
+        letter-spacing: 0.12em;
+        opacity: 0.8;
+      }
+
+      .loading-hint {
+        margin-top: 18px;
+        font-size: 12px;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        opacity: 0.45;
+        animation: pulse 1.8s ease-in-out infinite;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 0.35;
+        }
+        50% {
+          opacity: 0.75;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="unity-container">
+      <canvas id="unity-canvas" width="960" height="600"></canvas>
+      <div id="unity-warning"></div>
+      <div id="unity-footer">
+        <div id="unity-build-title">Pumpkin Panic</div>
+        <button id="unity-fullscreen-button" type="button">Fullscreen</button>
+      </div>
+      <div id="unity-loading-screen">
+        <div class="loading-content">
+          <div class="loading-title">Pumpkin Panic</div>
+          <div id="unity-progress-bar-empty">
+            <div id="unity-progress-bar-full"></div>
+          </div>
+          <div id="unity-progress-text">0%</div>
+          <div class="loading-hint">Loading…</div>
+        </div>
+      </div>
+    </div>
+    <script>
+      var container = document.querySelector("#unity-container");
+      var canvas = document.querySelector("#unity-canvas");
+      var loadingScreen = document.querySelector("#unity-loading-screen");
+      var progressBarFull = document.querySelector("#unity-progress-bar-full");
+      var progressText = document.querySelector("#unity-progress-text");
+      var fullscreenButton = document.querySelector("#unity-fullscreen-button");
+      var warningBanner = document.querySelector("#unity-warning");
+
+      var BASE_WIDTH = 960;
+      var BASE_HEIGHT = 600;
+
+      // Fit the canvas to the viewport while preserving the game's aspect ratio.
+      function resizeCanvas() {
+        var ratio = BASE_WIDTH / BASE_HEIGHT;
+        var width = window.innerWidth;
+        var height = width / ratio;
+        if (height > window.innerHeight) {
+          height = window.innerHeight;
+          width = height * ratio;
+        }
+        canvas.style.width = width + "px";
+        canvas.style.height = height + "px";
+      }
+
+      window.addEventListener("resize", resizeCanvas);
+      window.addEventListener("orientationchange", resizeCanvas);
+      document.addEventListener("fullscreenchange", resizeCanvas);
+      resizeCanvas();
+
+      // Shows a temporary message banner/ribbon for a few seconds, or
+      // a permanent error message on top of the canvas if type=='error'.
+      // If type=='warning', a yellow highlight color is used.
+      function unityShowBanner(msg, type) {
+        function updateBannerVisibility() {
+          warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
+        }
+        var div = document.createElement('div');
+        div.innerHTML = msg;
+        warningBanner.appendChild(div);
+        if (type == 'error') div.style = 'background: red; padding: 10px;';
+        else {
+          if (type == 'warning') div.style = 'background: yellow; padding: 10px;';
+          setTimeout(function() {
+            warningBanner.removeChild(div);
+            updateBannerVisibility();
+          }, 5000);
+        }
+        updateBannerVisibility();
+      }
+
+      var buildUrl = "Build";
+      var loaderUrl = buildUrl + "/WebBuild_HTML5.loader.js";
+      var config = {
+        dataUrl: buildUrl + "/WebBuild_HTML5.data.unityweb",
+        dataUrlParts: [
+          buildUrl + "/WebBuild_HTML5.data.unityweb.part0",
+          buildUrl + "/WebBuild_HTML5.data.unityweb.part1",
+          buildUrl + "/WebBuild_HTML5.data.unityweb.part2",
+          buildUrl + "/WebBuild_HTML5.data.unityweb.part3",
+          buildUrl + "/WebBuild_HTML5.data.unityweb.part4",
+          buildUrl + "/WebBuild_HTML5.data.unityweb.part5",
+          buildUrl + "/WebBuild_HTML5.data.unityweb.part6",
+        ],
+        frameworkUrl: buildUrl + "/WebBuild_HTML5.framework.js.unityweb",
+        codeUrl: buildUrl + "/WebBuild_HTML5.wasm.unityweb",
+        streamingAssetsUrl: "StreamingAssets",
+        companyName: "Bilalaika",
+        productName: "Pumpkin Panic",
+        productVersion: "1.1",
+        showBanner: unityShowBanner,
+      };
+
+      if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+        // Avoid draining fillrate performance on mobile devices,
+        // and default/override low DPI mode on mobile browsers.
+        config.devicePixelRatio = 1;
+        unityShowBanner('WebGL builds are not supported on mobile devices.');
+      }
+
+      function setProgress(progress) {
+        var percent = Math.max(0, Math.min(100, Math.round(progress * 100)));
+        progressBarFull.style.width = percent + "%";
+        progressText.textContent = percent + "%";
+      }
+
+      function showLoadError(message) {
+        progressText.textContent = "Failed to load";
+        var hint = document.querySelector(".loading-hint");
+        if (hint) hint.textContent = message;
+        unityShowBanner(message, 'error');
+      }
+
+      var script = document.createElement("script");
+      script.src = loaderUrl;
+      script.onload = () => {
+        createUnityInstance(canvas, config, setProgress)
+          .then((unityInstance) => {
+            loadingScreen.classList.add("hidden");
+            setTimeout(function () {
+              loadingScreen.style.display = "none";
+            }, 600);
+            fullscreenButton.onclick = () => {
+              unityInstance.SetFullscreen(1);
+            };
+          })
+          .catch((message) => {
+            console.error(message);
+            showLoadError(message);
+          });
+      };
+      script.onerror = () => {
+        showLoadError("Could not load " + loaderUrl);
+      };
+      document.body.appendChild(script);
+    </script>
+  </body>
+</html>
